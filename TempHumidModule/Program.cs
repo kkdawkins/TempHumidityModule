@@ -59,7 +59,8 @@ namespace TempHumidModule
             // Register callback to be called when a message is received by the module
             await ioTHubModuleClient.SetInputMessageHandlerAsync("input1", PipeMessage, ioTHubModuleClient);
 
-            serialPort = new SerialPort("SERIAL1");
+            serialPort = new SerialPort("COM1");
+            serialPort.Open();
             serialPort.DataReceived += serialPort_DataReceived;
             // TODO : Set Baud rate and other such things
 
@@ -78,18 +79,10 @@ namespace TempHumidModule
 
         private static void processDataReceived()
         {
-
-        }
-
-        public async Task<string> ReadSerialData(object userContext)
-        {
-            var moduleClient = userContext as ModuleClient;
-            if (moduleClient == null)
+            while (recievedData.Any())
             {
-                throw new InvalidOperationException("UserContext doesn't contain " + "expected values");
+                DataMessage message = new DataMessage(recievedData.Dequeue());
             }
-
-            return await Task.FromResult("foo");
         }
 
         /// <summary>
