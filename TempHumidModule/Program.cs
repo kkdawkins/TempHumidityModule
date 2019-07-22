@@ -13,10 +13,12 @@ namespace TempHumidModule
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Client;
     using Microsoft.Azure.Devices.Client.Transport.Mqtt;
+    using Newtonsoft.Json;
 
     class Program
     {
-        static int counter;
+        static int recvCounter;
+        static int sendCounter;
         static SerialPort serialPort;
         private static Queue<string> recievedData = new Queue<string>();
         private static ModuleClient ioTHubModuleClient;
@@ -77,11 +79,22 @@ namespace TempHumidModule
             processDataReceived();
         }
 
-        private static void processDataReceived()
+        private static async void processDataReceived()
         {
             while (recievedData.Any())
             {
+                int counterValue = Interlocked.Increment(ref recvCounter);
+
                 DataMessage message = new DataMessage(recievedData.Dequeue());
+
+                // TODO : Some interesting processing before send to Azure
+
+                string dataBuffer = JsonConvert.SerializeObject(message);
+                var eventMessage = new Message(Encoding.UTF8.GetBytes(dataBuffer));
+
+                Console.WriteLine($"\t{DateTime.Now.ToLocalTime()}> Sending message id: {counterValue}, Body: {dataBuffer}");
+
+                await ioTHubModuleClient.SendEventAsync(eventMessage);
             }
         }
 
@@ -92,7 +105,7 @@ namespace TempHumidModule
         /// </summary>
         static async Task<MessageResponse> PipeMessage(Message message, object userContext)
         {
-            int counterValue = Interlocked.Increment(ref counter);
+            int counterValue = Interlocked.Increment(ref recvCounter);
 
             var moduleClient = userContext as ModuleClient;
             if (moduleClient == null)
